@@ -114,11 +114,6 @@ removeLeast Emp = Emp
 removeLeast (Bind k v Emp _) = Emp
 removeLeast (Bind k v l r) = Bind k v (removeLeast l) r
 
-
-
-
-
-
 -- Part 3: An Interpreter for WHILE
 -- ================================
 
@@ -202,9 +197,23 @@ evalOp Plus (IntVal i) (IntVal j) = IntVal (i+j)
 
 -- >
 
-evalE (Var x)      = error "TBD"
-evalE (Val v)      = error "TBD"
-evalE (Op o e1 e2) = error "TBD"
+evalE (Var x)      = do 
+                      s <- get
+                      return (findWithDefault (IntVal 0) x s) 
+
+evalE (Val v)      = return v
+evalE (Op o e1 e2) = do
+                      IntVal i1 <- evalE (e1)
+                      IntVal i2 <- evalE (e2)
+                      case o of
+                            Plus   ->  return (IntVal  (i1 +     i2))
+                            Minus  ->  return (IntVal  (i1 -     i2))
+                            Times  ->  return (IntVal  (i1 *     i2))
+                            Divide ->  return (IntVal  (i1 `div` i2))
+                            Gt     ->  return (BoolVal (i1 >     i2))
+                            Ge     ->  return (BoolVal (i1 >=    i2))
+                            Lt     ->  return (BoolVal (i1 <     i2))
+                            Le     ->  return (BoolVal (i1 <=    i2))
 
 -- Statement Evaluator
 -- -------------------
@@ -212,7 +221,6 @@ evalE (Op o e1 e2) = error "TBD"
 -- Next, write a function
 
 evalS :: Statement -> State Store ()
-
 -- that takes as input a statement and returns a world-transformer that
 -- returns a unit. Here, the world-transformer should in fact update the input
 -- store appropriately with the assignments executed in the course of
@@ -222,18 +230,38 @@ evalS :: Statement -> State Store ()
 -- Thus, to "update" the value of the store with the new store `s'`
 -- do `put s'`.
 
-evalS (Assign x e )    = error "TBD"
-evalS w@(While e s)    = error "TBD"
-evalS Skip             = error "TBD"
-evalS (Sequence s1 s2) = error "TBD"
-evalS (If e s1 s2)     = error "TBD"
+evalS (Assign x e )    = do
+                          s <- get 
+                          v <- evalE e 
+                          put (insert x v s)
 
+evalS w@(While e s)    = do
+                          v <- evalE e
+                          case v of 
+                            BoolVal True  -> do
+                                              evalS s
+                                              evalS w
+                            BoolVal False -> return ()
+                            IntVal  _     -> return ()
+
+evalS Skip             = return ()
+
+evalS (Sequence s1 s2) = do 
+                          evalS s1
+                          evalS s2
+
+evalS (If e s1 s2)     = do
+                          v <- evalE e
+                          case v of 
+                            BoolVal True  ->  evalS s1
+                            BoolVal False ->  evalS s2
+                            IntVal  _     -> return ()
 -- In the `If` case, if `e` evaluates to a non-boolean value, just skip both
 -- the branches. (We will convert it into a type error in the next homework.)
 -- Finally, write a function
 
 execS :: Statement -> Store -> Store
-execS = error "TBD"
+execS stmt = execState (evalS stmt)
 
 -- such that `execS stmt store` returns the new `Store` that results
 -- from evaluating the command `stmt` from the world `store`.
@@ -290,25 +318,35 @@ valueP = intP <|> boolP
 -- To do so, fill in the implementations of
 
 intP :: Parser Value
-intP = error "TBD"
+intP = do
+        x <- many1 digit
+        return (IntVal (read x))
 
 -- Next, define a parser that will accept a
 -- particular string `s` as a given value `x`
 
 constP :: String -> a -> Parser a
-constP s x = error "TBD"
+constP s x = do
+              string s
+              return x
 
 -- and use the above to define a parser for boolean values
 -- where `"true"` and `"false"` should be parsed appropriately.
 
 boolP :: Parser Value
-boolP = error "TBD"
+boolP = constP "true" (BoolVal True) <|> constP "false" (BoolVal False)
 
 -- Continue to use the above to parse the binary operators
 
 opP :: Parser Bop
-opP = error "TBD"
-
+opP = constP "+"  (Plus)   <|>
+      constP "-"  (Minus)  <|>
+      constP "*"  (Times)  <|>
+      constP "/"  (Divide) <|>
+      constP ">"  (Gt)     <|>
+      constP ">=" (Ge)     <|>
+      constP "<"  (Lt)     <|>
+      constP "<=" (Le) 
 
 -- Parsing Expressions
 -- -------------------
@@ -321,8 +359,36 @@ varP = many1 upper
 
 -- Use the above to write a parser for `Expression` values
 
+
 exprP :: Parser Expression
-exprP = error "TBD"
+exprP = try bOpP <|> parenP <|> varExprP <|> valExprP
+
+varExprP :: Parser Expression
+varExprP = do
+            v <- varP
+            return (Var v)
+
+valExprP :: Parser Expression
+valExprP = do
+            v <- valueP
+            return (Val v)
+
+parenP :: Parser Expression
+parenP = do
+          string "("
+          e <- exprP
+          string ")"
+          return (e)
+
+bOpP :: Parser Expression
+bOpP = do
+        e1 <- parenP <|> varExprP <|> valExprP
+        skipMany space
+        bop <- opP
+        skipMany space
+        e2 <- exprP
+        return (Op bop e1 e2)
+
 
 -- Parsing Statements
 -- ------------------
@@ -330,7 +396,60 @@ exprP = error "TBD"
 -- Next, use the expression parsers to build a statement parser
 
 statementP :: Parser Statement
-statementP = error "TBD"
+statementP = try seqP <|> assignP <|> ifP <|> whileP <|> skipP
+
+assignP :: Parser Statement
+assignP = do
+            v <- varP
+            skipMany space
+            string ":="
+            skipMany space
+            e <- exprP
+            skipMany space
+            return (Assign v e)
+ifP     :: Parser Statement
+ifP     = do
+            string "if"
+            skipMany space
+            e <- exprP
+            skipMany space
+            string "then"
+            skipMany space
+            stmt1 <- statementP
+            skipMany space
+            string "else"
+            skipMany space
+            stmt2 <- statementP
+            skipMany space
+            string "endif"
+            return (If e stmt1 stmt2)
+
+whileP  :: Parser Statement
+whileP  = do
+            string "while"
+            skipMany space
+            e <- exprP
+            skipMany space
+            string "do"
+            skipMany space
+            stmt1 <- statementP
+            skipMany space
+            string "endwhile"
+            return (While e stmt1)
+
+seqP    :: Parser Statement
+seqP    = do 
+            stmt1 <- assignP <|> ifP <|> whileP <|> skipP
+            skipMany space
+            string ";"
+            skipMany space
+            stmt2 <- statementP
+            return (Sequence stmt1 stmt2)
+
+skipP   :: Parser Statement
+skipP = do
+          string "skip"
+          return (Skip)
 
 -- When you are done, we can put the parser and evaluator together
 -- in the end-to-end interpreter function
