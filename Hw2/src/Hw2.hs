@@ -197,8 +197,7 @@ evalE :: Expression -> State Store Value
 -- the value of the "current store" in a variable `s` use `s <- get`.
 
 evalOp :: Bop -> Value -> Value -> Value
-evalOp Plus (IntVal i) (IntVal j) = IntVal (i+j)
-
+evalOp Plus   (IntVal i) (IntVal j) = IntVal (i+j)
 
 evalE (Var x)      = do 
                       s <- get
@@ -342,14 +341,17 @@ boolP = constP "true" (BoolVal True) <|> constP "false" (BoolVal False)
 -- Continue to use the above to parse the binary operators
 
 opP :: Parser Bop
-opP = constP "+"  (Plus)   <|>
-      constP "-"  (Minus)  <|>
-      constP "*"  (Times)  <|>
-      constP "/"  (Divide) <|>
-      constP ">"  (Gt)     <|>
-      constP ">=" (Ge)     <|>
-      constP "<"  (Lt)     <|>
-      constP "<=" (Le) 
+opP = 
+      choice[
+      try (constP ">=" (Ge))    ,
+      try (constP "<=" (Le) )   ,    
+      try (constP "+"  (Plus))  ,   
+      try (constP "-"  (Minus)) ,  
+      try (constP "*"  (Times) ),  
+      try (constP "/"  (Divide)), 
+      try (constP ">"  (Gt)    ),    
+      try (constP "<"  (Lt))]     
+      
 
 -- Parsing Expressions
 -- -------------------
@@ -385,7 +387,7 @@ parenP = do
 
 bOpP :: Parser Expression
 bOpP = do
-        e1 <- parenP <|> varExprP <|> valExprP
+        e1 <- try parenP <|> varExprP <|> valExprP
         skipMany space
         bop <- opP
         skipMany space
