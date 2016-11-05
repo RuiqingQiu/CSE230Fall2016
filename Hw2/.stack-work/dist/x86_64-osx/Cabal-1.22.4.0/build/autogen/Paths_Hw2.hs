@@ -16,11 +16,11 @@ version :: Version
 version = Version [1,0] []
 bindir, libdir, datadir, libexecdir, sysconfdir :: FilePath
 
-bindir     = "/Users/ruiqingqiu/Desktop/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/bin"
-libdir     = "/Users/ruiqingqiu/Desktop/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/lib/x86_64-osx-ghc-7.10.2/Hw2-1.0-2vU6yhTiA8DHLkm2WjVPHM"
-datadir    = "/Users/ruiqingqiu/Desktop/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/share/x86_64-osx-ghc-7.10.2/Hw2-1.0"
-libexecdir = "/Users/ruiqingqiu/Desktop/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/libexec"
-sysconfdir = "/Users/ruiqingqiu/Desktop/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/etc"
+bindir     = "/Users/margaretwm3/Dropbox/CSE230/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/bin"
+libdir     = "/Users/margaretwm3/Dropbox/CSE230/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/lib/x86_64-osx-ghc-7.10.2/Hw2-1.0-2vU6yhTiA8DHLkm2WjVPHM"
+datadir    = "/Users/margaretwm3/Dropbox/CSE230/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/share/x86_64-osx-ghc-7.10.2/Hw2-1.0"
+libexecdir = "/Users/margaretwm3/Dropbox/CSE230/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/libexec"
+sysconfdir = "/Users/margaretwm3/Dropbox/CSE230/CSE230/Hw2/.stack-work/install/x86_64-osx/nightly-2015-09-24/7.10.2/etc"
 
 getBinDir, getLibDir, getDataDir, getLibexecDir, getSysconfDir :: IO FilePath
 getBinDir = catchIO (getEnv "Hw2_bindir") (\_ -> return bindir)

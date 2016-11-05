@@ -60,6 +60,13 @@ myFoldl2 f b xs = Prelude.foldr fs b (myReverse xs)
 --    Try using `foldl'` (from [Data.List](http://www.haskell.org/ghc/docs/latest/html/libraries/base/Data-List.html#3))
 --    instead; can you explain why it's faster?
 
+--Solution: When applying a gigantic list, foldl will cause stack overflow whereas foldl' won't because foldl' uses seq function. Due to 
+----lazy evaluation in haskell, foldl won't evalute the reducible expression in the expression chain until the base case is reached, so when
+----there is a gigantic list, it will eventually cause stack overflow. But foldl' use a seq function which makes sure the reducible
+----expression is always evalute so the long chain of won'be formed, thus foldl' won't cause stack overflow but foldl can.
+
+
+
 -- Part 2: Binary Search Trees
 -- ===========================
 
@@ -69,14 +76,10 @@ data BST k v = Emp
              | Bind k v (BST k v) (BST k v)
              deriving (Show)
 
-tree1 = Bind 8 1 (Bind 5 4 Emp Emp) (Bind 10 9 Emp Emp)
-tree2 = Bind 5 1 (Bind 2 2 (Bind (-4) 3 Emp Emp) (Bind 3 4 Emp Emp)) (Bind 18 5 Emp Emp)
-tree3 = Bind 5 1 Emp (Bind 18 2 Emp (Bind 21 3 (Bind 19 4 Emp Emp) (Bind 25 5 Emp Emp)))
-tree4 = Bind 5 1 Emp (Bind 12 2 (Bind 9 3 Emp Emp) (Bind 21 4 (Bind 19 5 Emp Emp) (Bind 25 6 Emp Emp)))
-
 -- Define a `delete` function for BSTs of this type:
 
 delete :: (Ord k) => k -> BST k v -> BST k v
+
 delete k Emp = Emp
 -- No Child
 delete k (Bind k' v' Emp Emp) = 
@@ -95,6 +98,7 @@ delete k (Bind k' v' l Emp) =
   if k == k' then l
   else if k < k' then Bind k' v' (delete k l) Emp 
   else Bind k' v' l Emp
+
 -- Two children
 delete k (Bind k' v' l r) = 
   if k < k' then Bind k' v' (delete k l) r
@@ -195,7 +199,6 @@ evalE :: Expression -> State Store Value
 evalOp :: Bop -> Value -> Value -> Value
 evalOp Plus (IntVal i) (IntVal j) = IntVal (i+j)
 
--- >
 
 evalE (Var x)      = do 
                       s <- get
@@ -407,6 +410,7 @@ assignP = do
             e <- exprP
             skipMany space
             return (Assign v e)
+            
 ifP     :: Parser Statement
 ifP     = do
             string "if"
